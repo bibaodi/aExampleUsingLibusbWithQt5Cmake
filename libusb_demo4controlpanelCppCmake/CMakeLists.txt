@@ -29,6 +29,8 @@ cmake_print_variables(INCLUDE_DIRECTORIES)
 set(PROJECT_SOURCES
     usinglibusb.cpp
     usinglibusb.h
+    controlpanel_usb_controller.h
+    controlpanel_usb_controller.cpp
         main.cpp
         qml.qrc
 )

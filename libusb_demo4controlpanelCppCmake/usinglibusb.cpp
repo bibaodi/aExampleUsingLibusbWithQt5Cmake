@@ -1,15 +1,18 @@
 #include "usinglibusb.h"
+#include "controlpanel_usb_controller.h"
 #include <QDebug>
 #include <libusb.h>
+#include <qimage.h>
 
 UsingLibusb::UsingLibusb(QObject *qml, QObject *parent) : QObject{parent} {
     QObject::connect(qml, SIGNAL(sigQmlButtonClick(QString)), this, SLOT(slotFun(QString)));
-    usbmain();
 }
 
 void UsingLibusb::slotFun(const QString &string) {
     qDebug() << "debug before run listDevs:" << string;
-    usbmain();
+    // usbmain();
+    ControlPanelUsbController cpuc;
+    cpuc.connectDevice();
 }
 
 void UsingLibusb::print_devs(libusb_device **devs) {
@@ -24,7 +27,10 @@ void UsingLibusb::print_devs(libusb_device **devs) {
             fprintf(stderr, "failed to get device descriptor");
             return;
         }
-
+        const unsigned int vid = 0x1d6b, pid = 0x0003;
+        if (desc.idVendor == vid && desc.idProduct == pid) {
+            qDebug() << "matched...";
+        }
         printf("%04x:%04x (bus %d, device %d)", desc.idVendor, desc.idProduct, libusb_get_bus_number(dev),
                libusb_get_device_address(dev));
 
@@ -59,5 +65,31 @@ int UsingLibusb::usbmain(void) {
     libusb_free_device_list(devs, 1);
 
     libusb_exit(NULL);
+    return 0;
+}
+
+#include <stdio.h>
+
+int UsingLibusb::debugQimage() {
+    QImage img("/home/eton/Downloads/220929_debug3d_data/221018_D60mm_2formats/QimageData_0001.png");
+    qDebug("img.size=");
+    const unsigned int len = img.sizeInBytes(), height = img.height(), width = img.width();
+    qDebug() << "(" << len << height << width << ")";
+    FILE *pFile;
+    const unsigned char *buffer = img.constBits();
+    pFile = fopen("/tmp/qimage.myfileLines.bin", "wb");
+#if 0
+    /* write to file in one-time
+因为Qimage中内存以行为单位对齐存储，实际图像数据占用是内存对齐后的空间，如果使用img->constbits()直接以size的方式进行数据获取会导致因为实际数据没有对齐而出现错位; 修改为以constScanLine的方式进行读取就可以了
+*/
+#pragma pack(1) // no-use for Qimage's data is aligned
+    fwrite(buffer, sizeof(char), height * width, pFile);
+#pragma pack()
+#else
+    for (int i = 0; i < height; i++) {
+        fwrite(img.scanLine(i), sizeof(char), width, pFile);
+    }
+#endif
+    fclose(pFile);
     return 0;
 }

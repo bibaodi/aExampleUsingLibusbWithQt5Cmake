@@ -11,6 +11,7 @@ class UsingLibusb : public QObject {
     explicit UsingLibusb(QObject *qml, QObject *parent = nullptr);
     void print_devs(libusb_device **devs);
     int usbmain(void);
+    int debugQimage();
   signals:
   public slots:
     void slotFun(const QString &);

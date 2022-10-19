@@ -23,6 +23,6 @@ int main(int argc, char *argv[]) {
         return -1;
     }
     UsingLibusb *ptr = new UsingLibusb(topLevel);
-
+    ptr->debugQimage();
     return app.exec();
 }
