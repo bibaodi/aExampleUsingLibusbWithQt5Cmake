@@ -31,6 +31,7 @@ set(PROJECT_SOURCES
     usinglibusb.h
     controlpanel_usb_controller.h
     controlpanel_usb_controller.cpp
+    controlpanel_protocal.h controlpanel_protocal.cpp
         main.cpp
         qml.qrc
 )
