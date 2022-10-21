@@ -17,12 +17,14 @@ int main(int argc, char *argv[]) {
     engine.load(url);
 
     QObject *root = engine.rootObjects().value(0);
-    QObject *topLevel = root->findChild<QObject *>("buttonObjName");
+    QObject *topLevel = root->findChild<QObject *>("masterItem"); //
     if (!topLevel) {
         qDebug() << "Error: not found loader!";
         return -1;
     }
+
     UsingLibusb *ptr = new UsingLibusb(topLevel);
     ptr->debugQimage();
+
     return app.exec();
 }

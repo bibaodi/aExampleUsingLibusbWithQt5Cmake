@@ -15,6 +15,7 @@ class UsingLibusb : public QObject {
   signals:
   public slots:
     void slotFun(const QString &);
+    void slotLight(const QString &);
 };
 
 #endif // USINGLIBUSB_H

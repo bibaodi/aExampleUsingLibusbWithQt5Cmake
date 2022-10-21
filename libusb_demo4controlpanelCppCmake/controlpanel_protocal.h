@@ -3,6 +3,8 @@
 
 #include <string>
 
+#define PROTOCAL_SUCCESS 0
+
 enum class PacketFrame { HEAD_DATA = 0xAA, TRAIL_DATA = 0xBB };
 
 enum class PacketDefine { HEAD_LEN = 1, HEAD = 0, LEN = 1, CMD = 2, STA = 3, DATA = 4, LEN_MIN = 4, LEN_MAX = 64 };
@@ -35,11 +37,29 @@ enum class HidCmdCode {
     CMD_END = 0x09
 };
 
+struct ProtocalFormat {
+    const unsigned char HIDreportIDbyte = 0x02;
+    const unsigned char head = 170;
+    unsigned char length = 0; // equal: cmdCode + cmdData+ xor ->len(cmdData)+2
+    unsigned char cmdCode = 0;
+    unsigned char *cmdData = NULL;
+    unsigned char xorValue = 0;
+    unsigned int getTotalLength();
+    unsigned int getLengthForXOR();
+    unsigned char calculateXor();
+    unsigned char getLength();
+    void setLength(const unsigned char dataLength);
+};
+
 class ControlPanelProtocal {
   public:
     ControlPanelProtocal();
     static std::string cmdCode2String(const int _code);
     static std::string errCode2String(const int _code);
+    int getProtocalFormatBuffer(HidCmdCode, unsigned char *cmdData, const unsigned int cmdDataLength,
+                                unsigned char *outBuffer, int *outLength);
+
+  private:
 };
 
 #endif // CONTROLPANELPROTOCAL_H

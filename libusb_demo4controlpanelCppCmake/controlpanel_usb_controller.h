@@ -2,8 +2,10 @@
 #define CONTROLPANELUSBCONTROLLER_H
 
 #include <QObject>
+#include <memory>
 class libusb_device_handle;
 class libusb_device;
+class ControlPanelProtocal;
 
 class ControlPanelUsbController : public QObject {
     Q_OBJECT
@@ -16,6 +18,8 @@ class ControlPanelUsbController : public QObject {
     int connectDevice();
     int connectDevice_quickTest();
     int disconnectDevice();
+    int checkStatusOfConnection();
+    int controlLedLights(std::vector<unsigned char> arrayOfValues);
 
   private:
     //!
@@ -34,11 +38,16 @@ class ControlPanelUsbController : public QObject {
     //! \return
     //!
     int openDeviceByVenderProductIds(const unsigned int vid, const unsigned int pid);
+    int cmdWrite(unsigned char *data, unsigned int dataLen);
+    int cmdWriteAsync(unsigned char *data, unsigned int dataLen);
+    int doCmdRead();
+    int cmdRead(unsigned char *data, unsigned int *dataLen);
 
   private:
     bool m_isConnected;
     unsigned int m_vendorId;
     unsigned int m_productId;
+    const std::shared_ptr<ControlPanelProtocal> m_cpp;
     libusb_device_handle *m_deviceHandle;
     const unsigned int m_interfaceIdx, m_altsettingIdx;
     unsigned int m_endPointInAddr, m_endPointOutAddr;

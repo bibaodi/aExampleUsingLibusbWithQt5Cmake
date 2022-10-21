@@ -4,15 +4,41 @@
 #include <libusb.h>
 #include <qimage.h>
 
-UsingLibusb::UsingLibusb(QObject *qml, QObject *parent) : QObject{parent} {
-    QObject::connect(qml, SIGNAL(sigQmlButtonClick(QString)), this, SLOT(slotFun(QString)));
+UsingLibusb::UsingLibusb(QObject *rootItem, QObject *parent) : QObject{parent} {
+    QObject *btnConnect = rootItem->findChild<QObject *>("buttonConnect");
+    if (btnConnect) {
+        QObject::connect(btnConnect, SIGNAL(sigQmlButtonClick(QString)), this, SLOT(slotFun(QString)));
+    }
+    QObject *buttonLight = rootItem->findChild<QObject *>("buttonLight");
+    if (buttonLight) {
+        QObject::connect(buttonLight, SIGNAL(sigQmlButtonClick(QString)), this, SLOT(slotFun(QString)));
+    }
 }
 
+ControlPanelUsbController cpuc;
 void UsingLibusb::slotFun(const QString &string) {
     qDebug() << "debug before run listDevs:" << string;
     // usbmain();
-    ControlPanelUsbController cpuc;
-    cpuc.connectDevice();
+    if (!string.contains("close", Qt::CaseInsensitive)) {
+        int ret = cpuc.connectDevice();
+        if (ret) {
+            qDebug("connect error: %d", ret);
+            return;
+        }
+
+    } else {
+        cpuc.disconnectDevice();
+    }
+}
+
+void UsingLibusb::slotLight(const QString &string) {
+    qDebug() << "debug before run listDevs:" << string;
+
+    std::vector<unsigned char> lights(29);
+    for (int i = 0; i < 29; i++) {
+        lights[i] = 0;
+    }
+    cpuc.controlLedLights(lights);
 }
 
 void UsingLibusb::print_devs(libusb_device **devs) {

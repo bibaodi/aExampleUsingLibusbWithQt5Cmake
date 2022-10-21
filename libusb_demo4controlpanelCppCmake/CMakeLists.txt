@@ -51,7 +51,9 @@ target_compile_definitions(${targetAppName}
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 #Attention: below code I forgot '${}' so variable cannot evulated , cost me 1h to debug it. eton@22/10/17
 target_link_libraries(${targetAppName}
-  PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick ${LIBUSB_LIBRARIES})
+  PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Quick ${LIBUSB_LIBRARIES}
+pthread)
+
 
 message(STATUS "debug:INCLUDE_DIRECTORIES=${INCLUDE_DIRECTORIES}")
 MESSAGE(STATUS "debug variable infomation=${INCLUDE_DIRECTORIES}")
