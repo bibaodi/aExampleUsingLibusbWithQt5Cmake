@@ -11,7 +11,7 @@ UsingLibusb::UsingLibusb(QObject *rootItem, QObject *parent) : QObject{parent} {
     }
     QObject *buttonLight = rootItem->findChild<QObject *>("buttonLight");
     if (buttonLight) {
-        QObject::connect(buttonLight, SIGNAL(sigQmlButtonClick(QString)), this, SLOT(slotFun(QString)));
+        QObject::connect(buttonLight, SIGNAL(sigQmlButtonClick(QString)), this, SLOT(slotLight(QString)));
     }
 }
 
@@ -33,10 +33,11 @@ void UsingLibusb::slotFun(const QString &string) {
 
 void UsingLibusb::slotLight(const QString &string) {
     qDebug() << "debug before run listDevs:" << string;
+    int lightValue = string.toInt();
 
     std::vector<unsigned char> lights(29);
     for (int i = 0; i < 29; i++) {
-        lights[i] = 0;
+        lights[i] = lightValue;
     }
     cpuc.controlLedLights(lights);
 }

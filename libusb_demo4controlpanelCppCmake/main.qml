@@ -41,8 +41,17 @@ Window {
                 text: "lightSet"
                 signal sigQmlButtonClick(string msg)
                 onClicked: {
-                    console.log("Button clicked...")
+                    console.log("light set clicked...")
                     id_buttonLight.sigQmlButtonClick("12")
+                }
+            }
+            Button {
+                id: id_buttonLightOff
+                objectName: "buttonLightOff"
+                text: "lightsOff"
+                onClicked: {
+                    console.log("light off clicked...")
+                    id_buttonLight.sigQmlButtonClick("0")
                 }
             }
         }

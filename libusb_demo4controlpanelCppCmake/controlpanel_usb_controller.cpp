@@ -78,6 +78,7 @@ int ControlPanelUsbController::connectDevice() {
         qDebug("detach kernel is needed.");
         libusb_detach_kernel_driver(handle, INTERFACE_NUMBER);
     }
+    qDebug("claim interface");
     int numberOfAttempts = 5;
     while (numberOfAttempts-- >= 0) {
         ret = libusb_claim_interface(handle, INTERFACE_NUMBER);
@@ -89,9 +90,10 @@ int ControlPanelUsbController::connectDevice() {
             continue;
         }
         if (LIBUSB_SUCCESS == ret) {
+            qDebug("success claim interface.");
             m_isConnected = true;
             m_deviceHandle = handle;
-            cmdRead(nullptr, nullptr); // start thread
+            // cmdRead(nullptr, nullptr); // start thread
             return LIBUSB_SUCCESS;
         }
     }
@@ -246,13 +248,17 @@ int ControlPanelUsbController::cmdWriteAsync(unsigned char *irqbuf, unsigned int
 int ControlPanelUsbController::cmdWrite(unsigned char *irqbuf, unsigned int dataLen) {
     int ret = 0;
     int transferedInfo = 0;
+    assert(dataLen > 5 && dataLen <= 64);
+    for (int i = 0; i < dataLen; i++) {
+        qDebug("cmd [%d]=%d,", i, irqbuf[i]);
+    }
     if (false == m_isConnected || nullptr == m_deviceHandle) {
         qDebug("cmdWrite: handle not available");
         return -1;
     }
 
-    ret =
-        libusb_interrupt_transfer(m_deviceHandle, m_endPointInAddr, irqbuf, dataLen, &transferedInfo, TIMEOUT_TRANSFER);
+    ret = libusb_interrupt_transfer(m_deviceHandle, m_endPointOutAddr, irqbuf, dataLen, &transferedInfo,
+                                    TIMEOUT_TRANSFER);
     if (ret) {
         ErrPrint(cmd - Write, ret);
     }
@@ -262,15 +268,16 @@ int ControlPanelUsbController::cmdWrite(unsigned char *irqbuf, unsigned int data
 
 int ControlPanelUsbController::doCmdRead() {
     int ret = 0;
-    while (true) {
+    int n = 10;
+    while (n--) {
         int transferedInfo = 0;
         if (false == m_isConnected || nullptr == m_deviceHandle) {
             qDebug("cmdWrite: handle not available");
-            return -1;
+            continue;
         }
         unsigned int dataLen = 64;
         unsigned char data[64];
-        ret = libusb_interrupt_transfer(m_deviceHandle, m_endPointOutAddr, data, dataLen, &transferedInfo,
+        ret = libusb_interrupt_transfer(m_deviceHandle, m_endPointInAddr, data, dataLen, &transferedInfo,
                                         TIMEOUT_TRANSFER);
         if (ret) {
             ErrPrint(cmd_Write, ret);

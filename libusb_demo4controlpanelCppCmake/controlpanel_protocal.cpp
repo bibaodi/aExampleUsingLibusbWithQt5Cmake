@@ -16,8 +16,8 @@ unsigned char ProtocalFormat::calculateXor() {
     printf("xor data len=%d, %d, %d", len, length, cmdCode);
     for (int i = 0; i < len; i++) {
         xorValue ^= cmdData[i];
-        printf("[%d]>>>xorV=%d,", i, xorValue);
-        printf("xordata=%d,\n", cmdData[i]);
+        // printf("[%d]>>>xorV=%d,", i, xorValue);
+        // printf("xordata=%d,\n", cmdData[i]);
     }
     printf("xor data END/n");
     return xorValue;
@@ -122,7 +122,7 @@ int ControlPanelProtocal::getProtocalFormatBuffer(HidCmdCode cmdCode, unsigned c
     const int xorIndx = i;
     outBuffer[xorIndx] = pf.xorValue;
     *outLength = pf.getTotalLength();
-    bool debug = true;
+    bool debug = false;
     if (debug) {
         for (int i = 0; i < *outLength; i++) {
             printf("Index[%d]={%d},", i, outBuffer[i]);
