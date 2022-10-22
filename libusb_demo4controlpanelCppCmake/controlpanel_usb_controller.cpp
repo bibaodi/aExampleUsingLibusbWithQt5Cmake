@@ -1,5 +1,6 @@
 #include "controlpanel_usb_controller.h"
 #include "controlpanel_protocal.h"
+#include "semaphore_cpp17.h"
 #include <QDebug>
 #include <future>
 #include <libusb.h>
@@ -23,6 +24,8 @@
 #define ErrPrint(Position, code) qDebug(#Position "Err:%s[%d]", libusb_error_name(code), code)
 
 #define __RESET_ENDPOINT() m_endPointOutAddr = -1, m_endPointInAddr = -1, m_wMaxPacketSize = -1
+
+std::binary_semaphore smphSignalMainToThread{0}, smphSignalThreadToMain{0};
 
 ControlPanelUsbController::ControlPanelUsbController(QObject *parent)
     : m_isConnected(false), m_vendorId(SHENNAN_idVender), m_productId(SHENNAN_idProduct), m_deviceHandle(nullptr),
@@ -93,7 +96,7 @@ int ControlPanelUsbController::connectDevice() {
             qDebug("success claim interface.");
             m_isConnected = true;
             m_deviceHandle = handle;
-            // cmdRead(nullptr, nullptr); // start thread
+            cmdRead(nullptr, nullptr); // start thread
             return LIBUSB_SUCCESS;
         }
     }
@@ -257,8 +260,11 @@ int ControlPanelUsbController::cmdWrite(unsigned char *irqbuf, unsigned int data
         return -1;
     }
 
+    smphSignalThreadToMain.acquire();
     ret = libusb_interrupt_transfer(m_deviceHandle, m_endPointOutAddr, irqbuf, dataLen, &transferedInfo,
                                     TIMEOUT_TRANSFER);
+    smphSignalMainToThread.release();
+
     if (ret) {
         ErrPrint(cmd - Write, ret);
     }
@@ -269,6 +275,7 @@ int ControlPanelUsbController::cmdWrite(unsigned char *irqbuf, unsigned int data
 int ControlPanelUsbController::doCmdRead() {
     int ret = 0;
     int n = 10;
+    smphSignalThreadToMain.release();
     while (n--) {
         int transferedInfo = 0;
         if (false == m_isConnected || nullptr == m_deviceHandle) {
@@ -277,8 +284,11 @@ int ControlPanelUsbController::doCmdRead() {
         }
         unsigned int dataLen = 64;
         unsigned char data[64];
+
+        smphSignalMainToThread.acquire();
         ret = libusb_interrupt_transfer(m_deviceHandle, m_endPointInAddr, data, dataLen, &transferedInfo,
                                         TIMEOUT_TRANSFER);
+        smphSignalThreadToMain.release();
         if (ret) {
             ErrPrint(cmd_Write, ret);
         }
