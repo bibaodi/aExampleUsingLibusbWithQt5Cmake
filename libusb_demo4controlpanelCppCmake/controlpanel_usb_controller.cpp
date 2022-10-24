@@ -108,6 +108,7 @@ int ControlPanelUsbController::disconnectDevice() {
     int ret = 0;
 
     if (nullptr != m_deviceHandle) {
+        smphSignalMainToThread.release(); // make read thread exit ;
         qDebug("release interface");
         ret = libusb_release_interface(m_deviceHandle, INTERFACE_NUMBER);
         if (ret) {
@@ -116,6 +117,7 @@ int ControlPanelUsbController::disconnectDevice() {
         qDebug("close device");
         libusb_close(m_deviceHandle);
     }
+
     m_isConnected = false;
     m_deviceHandle = nullptr;
     __RESET_ENDPOINT();
@@ -131,6 +133,7 @@ int ControlPanelUsbController::checkStatusOfConnection() {
 }
 
 int ControlPanelUsbController::controlLedLights(std::vector<unsigned char> arrayOfValues) {
+    qDebug("array of values[0]=%d", arrayOfValues[0]);
     int ret = checkStatusOfConnection();
     if (ret) {
         ErrPrint(controlLedLights_connection, ret);
@@ -274,13 +277,13 @@ int ControlPanelUsbController::cmdWrite(unsigned char *irqbuf, unsigned int data
 
 int ControlPanelUsbController::doCmdRead() {
     int ret = 0;
-    int n = 10;
+    int n = 1000;
     smphSignalThreadToMain.release();
     while (n--) {
         int transferedInfo = 0;
         if (false == m_isConnected || nullptr == m_deviceHandle) {
-            qDebug("cmdWrite: handle not available");
-            continue;
+            qDebug("doCmdRead: handle not available");
+            return -1; // continue;
         }
         unsigned int dataLen = 64;
         unsigned char data[64];
@@ -290,11 +293,22 @@ int ControlPanelUsbController::doCmdRead() {
                                         TIMEOUT_TRANSFER);
         smphSignalThreadToMain.release();
         if (ret) {
-            ErrPrint(cmd_Write, ret);
+            ErrPrint(readThread, ret);
+            if (LIBUSB_ERROR_IO == ret) {
+                qDebug("doCmdRead: IO error Exit.");
+                return LIBUSB_ERROR_IO;
+            }
         }
         qDebug("read data: transfered=%d", transferedInfo);
         for (int i = 0; i < transferedInfo; i++) {
             qDebug("\treadData:[%d]=%d,", i, data[i]);
+        }
+        ProtocalFormat rpf;
+        ret = rpf.parseResponseFromData(data, transferedInfo);
+        if (ret) {
+            qErrnoWarning("response parsed error%d", ret);
+        } else {
+            qDebug("response parse success: code=%s", m_cpp->errCode2String(rpf.getResponseCode()).c_str());
         }
         dataLen = transferedInfo;
     }
@@ -305,8 +319,10 @@ int ControlPanelUsbController::cmdRead(unsigned char *data, unsigned int *dataLe
     unsigned int dataLen1 = 64;
     unsigned char data1[64];
     // auto mcu_thread = std::async(std::launch::async, &ControlPanelUsbController::doCmdRead, this, data1, &dataLen1);
-    std::thread readThread(&ControlPanelUsbController::doCmdRead, this);
-    readThread.detach();
+    std::thread *r = new std::thread(&ControlPanelUsbController::doCmdRead, this);
+    r->detach();
+    m_readThread = r;
+
     qInfo("starting read Thread.");
     return 0;
 }

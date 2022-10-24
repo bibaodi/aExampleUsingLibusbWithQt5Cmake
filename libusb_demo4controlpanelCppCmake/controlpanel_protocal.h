@@ -4,6 +4,11 @@
 #include <string>
 
 #define PROTOCAL_SUCCESS 0
+#define PROTOCAL_ERR -4000
+#define PROTOCAL_ERR_HEAD (PROTOCAL_ERR - 1)
+#define PROTOCAL_ERR_LENSHORT (PROTOCAL_ERR - 2)
+#define PROTOCAL_ERR_CMD (PROTOCAL_ERR - 10)
+#define PROTOCAL_ERR_XOR (PROTOCAL_ERR - 20)
 
 enum class PacketFrame { HEAD_DATA = 0xAA, TRAIL_DATA = 0xBB };
 
@@ -37,18 +42,38 @@ enum class HidCmdCode {
     CMD_END = 0x09
 };
 
-struct ProtocalFormat {
-    const unsigned char HIDreportIDbyte = 0x02;
-    const unsigned char head = 170;
-    unsigned char length = 0; // equal: cmdCode + cmdData+ xor ->len(cmdData)+2
-    unsigned char cmdCode = 0;
-    unsigned char *cmdData = NULL;
-    unsigned char xorValue = 0;
-    unsigned int getTotalLength();
+class ProtocalFormat {
+  public:
+    ProtocalFormat();
+
+  private:
     unsigned int getLengthForXOR();
+    void setCmdDataPtr(unsigned char *);
+    void setLength(const unsigned char dataLength);
+    bool checkXorValue(unsigned char *data, int length, unsigned char expectXorValue);
+    int getResponseDataFieldLength(int lengthInResponse);
+    const unsigned char m_HIDreportIDbyte = 0x02;
+    const unsigned char m_head = 170;
+    unsigned char m_length = 0; // equal: cmdCode + cmdData+ xor ->len(cmdData)+2
+    unsigned char m_cmdCode = 0;
+    unsigned char *m_cmdData = NULL;
+    unsigned char m_xorValue = 0;
+    // not belong to cmd data;
+    int m_cmdDataLength;
+    unsigned char m_responseData[64];
+
+  public:
+    unsigned int getTotalLength();
     unsigned char calculateXor();
     unsigned char getLength();
-    void setLength(const unsigned char dataLength);
+    void setCmdCode(const unsigned char _code);
+    void setCmdData(unsigned char *ptr, int length);
+    int getResponseCode();
+
+  public:
+    int getSerializedData(HidCmdCode cmdCode, unsigned char *outBuffer, int *outLength);
+    int getSerializedData(unsigned char *outBuffer, int *outLength);
+    int parseResponseFromData(unsigned char *buf, int len);
 };
 
 class ControlPanelProtocal {
@@ -58,8 +83,23 @@ class ControlPanelProtocal {
     static std::string errCode2String(const int _code);
     int getProtocalFormatBuffer(HidCmdCode, unsigned char *cmdData, const unsigned int cmdDataLength,
                                 unsigned char *outBuffer, int *outLength);
-
+#define FUNCTION_DECLARE(FUN_NAME)                                                                                     \
+    int FUN_NAME(unsigned char *cmdData, const unsigned int cmdDataLength, unsigned char *outBuffer, int *outLength)
+    FUNCTION_DECLARE(generateLightSetBuffer);
+    FUNCTION_DECLARE(generateSliderSetBuffer);
+    FUNCTION_DECLARE(generateSooftwareUpgradeBuffer);
+    FUNCTION_DECLARE(generateUuidSetBuffer);
+#undef FUNCTION_DECLARE
+#define FUNCTION_NODATA_DECLARE(FUN_NAME) int FUN_NAME(unsigned char *outBuffer, int *outLength)
+    FUNCTION_NODATA_DECLARE(generateVersionGetBuffer);
+    FUNCTION_NODATA_DECLARE(generateUuidGetBuffer);
+    FUNCTION_NODATA_DECLARE(generateLightsGetBuffer);
+    FUNCTION_NODATA_DECLARE(generateStatusGetBuffer);
+#undef FUNCTION_NODATA_DECLARE
   private:
+    int getProtocalFormatBufferWithData(HidCmdCode, unsigned char *cmdData, const unsigned int cmdDataLength,
+                                        unsigned char *outBuffer, int *outLength);
+    int getProtocalFormatBufferWithoutData(HidCmdCode, unsigned char *outBuffer, int *outLength);
 };
 
 #endif // CONTROLPANELPROTOCAL_H

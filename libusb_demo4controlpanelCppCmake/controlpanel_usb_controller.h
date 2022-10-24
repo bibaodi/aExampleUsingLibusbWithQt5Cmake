@@ -6,6 +6,9 @@
 class libusb_device_handle;
 class libusb_device;
 class ControlPanelProtocal;
+namespace std {
+class thread;
+}
 
 class ControlPanelUsbController : public QObject {
     Q_OBJECT
@@ -52,6 +55,7 @@ class ControlPanelUsbController : public QObject {
     const unsigned int m_interfaceIdx, m_altsettingIdx;
     unsigned int m_endPointInAddr, m_endPointOutAddr;
     unsigned int m_wMaxPacketSize;
+    std::thread *m_readThread;
   signals:
 };
 
