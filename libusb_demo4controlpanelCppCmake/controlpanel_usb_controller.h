@@ -30,6 +30,25 @@ class ControlPanelUsbController : public QObject {
     //!
     int controlLedLights(std::vector<unsigned char> arrayOfValues);
     int getLedLights(std::vector<unsigned char> &arrayOfValues);
+    //!
+    //! \brief controlSider
+    //! \param sensitive [0,10]
+    //! \param direction [0=fromLeftToRigthRollUp, 1=fromLeftToRigthRollDown]
+    //! \return errCode
+    //!
+    int controlSider(int sensitive, int direction);
+    //!
+    //! \brief getSoftwareVersion
+    //! \param outVersion (char [64]) as output parameter.
+    //! \return errcode
+    //!
+    int getSoftwareVersion(char *outVersion);
+    //!
+    //! \brief getUuid (char [64]) as output parameter.
+    //! \param outString
+    //! \return errcode
+    //!
+    int getUuid(char *outString);
 
   private:
     //!

@@ -12,10 +12,16 @@ class UsingLibusb : public QObject {
     void print_devs(libusb_device **devs);
     int usbmain(void);
     int debugQimage();
+
+  private:
+    void controlLights(QString);
+    void controlSlider(QString);
+    void getVersion();
+    void getUuid();
   signals:
   public slots:
     void slotFun(const QString &);
-    void slotLight(const QString &);
+    void slotCmdDispatch(const QString &);
 };
 
 #endif // USINGLIBUSB_H

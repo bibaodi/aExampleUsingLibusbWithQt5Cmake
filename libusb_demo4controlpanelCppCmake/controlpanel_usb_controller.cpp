@@ -141,6 +141,7 @@ int ControlPanelUsbController::controlLedLightsOnlySetNoRead(std::vector<unsigne
     int ret = checkStatusOfConnection();
     if (ret) {
         ErrPrint(controlLedLights_connection, ret);
+        return ret;
     }
     const unsigned int maxLen = static_cast<unsigned int>(PacketDefine::LEN_MAX);
     unsigned int inLength = arrayOfValues.size();
@@ -169,6 +170,7 @@ int ControlPanelUsbController::controlLedLights(std::vector<unsigned char> array
     int ret = checkStatusOfConnection();
     if (ret) {
         ErrPrint(controlLedLights_connection, ret);
+        return ret;
     }
     const unsigned int maxLen = static_cast<unsigned int>(PacketDefine::LEN_MAX);
     unsigned int inLength = arrayOfValues.size();
@@ -200,7 +202,12 @@ int ControlPanelUsbController::controlLedLights(std::vector<unsigned char> array
 }
 
 int ControlPanelUsbController::getLedLights(std::vector<unsigned char> &arrayOfValues) {
-    int ret = 0;
+    int ret = checkStatusOfConnection();
+    if (ret) {
+        ErrPrint(controlLedLights_connection, ret);
+        return ret;
+    }
+
     const unsigned int maxLen = static_cast<unsigned int>(PacketDefine::LEN_MAX);
     unsigned char outBuf[maxLen] = {0};
     int outLength = 0;
@@ -225,6 +232,107 @@ int ControlPanelUsbController::getLedLights(std::vector<unsigned char> &arrayOfV
     for (int i = 0; i < outLength; i++) {
         arrayOfValues.push_back(outBuf[i]);
     }
+    return ret;
+}
+
+int ControlPanelUsbController::controlSider(int sensitive, int direction) {
+    int ret = checkStatusOfConnection();
+    if (ret) {
+        ErrPrint(controlLedLights_connection, ret);
+        return ret;
+    }
+    const unsigned int maxLen = static_cast<unsigned int>(PacketDefine::LEN_MAX);
+    unsigned int inLength = 2;
+    unsigned char inBuf[maxLen] = {0};
+    unsigned char outBuf[maxLen] = {0};
+    int outLength = 0;
+
+    inBuf[0] = sensitive, inBuf[1] = direction;
+
+    ret = m_cpp->generateSliderSetBuffer(inBuf, inLength, outBuf, &outLength);
+    if (ret) {
+        qDebug("get protocal buffer error");
+        return ret;
+    }
+    // convert to protocal format.
+    ret = cmdWriteNoLock(outBuf, outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdWrite, ret);
+    }
+    qDebug("finish cmdWriteNoLock");
+    outLength = maxLen;
+    ret = cmdReadNoLock(outBuf, &outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdRead, ret);
+    }
+    return ret;
+}
+
+int ControlPanelUsbController::getSoftwareVersion(char *outVersion) {
+    int ret = checkStatusOfConnection();
+    if (ret) {
+        ErrPrint(controlLedLights_connection, ret);
+        return ret;
+    }
+    const unsigned int maxLen = static_cast<unsigned int>(PacketDefine::LEN_MAX);
+    unsigned char outBuf[maxLen] = {0};
+    int outLength = 0;
+
+    ret = m_cpp->generateVersionGetBuffer(outBuf, &outLength);
+    if (ret) {
+        qDebug("get protocal buffer error");
+        return ret;
+    }
+    // convert to protocal format.
+    ret = cmdWriteNoLock(outBuf, outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdWrite, ret);
+    }
+    outLength = maxLen;
+    ret = cmdReadNoLock(outBuf, &outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdRead, ret);
+    }
+    int i = 0;
+    for (i = 0; i < outLength; i++) {
+        outVersion[i] = outBuf[i];
+    }
+    outVersion[i] = 0;
+    qDebug("version=%s", outVersion);
+    return ret;
+}
+
+int ControlPanelUsbController::getUuid(char *outString) {
+    int ret = checkStatusOfConnection();
+    if (ret) {
+        ErrPrint(controlLedLights_connection, ret);
+        return ret;
+    }
+    const unsigned int maxLen = static_cast<unsigned int>(PacketDefine::LEN_MAX);
+    unsigned char outBuf[maxLen] = {0};
+    int outLength = 0;
+
+    ret = m_cpp->generateUuidGetBuffer(outBuf, &outLength);
+    if (ret) {
+        qDebug("get protocal buffer error");
+        return ret;
+    }
+    // convert to protocal format.
+    ret = cmdWriteNoLock(outBuf, outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdWrite, ret);
+    }
+    outLength = maxLen;
+    ret = cmdReadNoLock(outBuf, &outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdRead, ret);
+    }
+    int i = 0;
+    for (i = 0; i < outLength; i++) {
+        outString[i] = outBuf[i];
+    }
+    outString[i] = 0;
+    qDebug("UUID=%s", outString);
     return ret;
 }
 
@@ -286,6 +394,7 @@ int ControlPanelUsbController::cmdReadNoLock(unsigned char *data, int *dataLen) 
     // unsigned int dataLen = 64;
     // unsigned char data[64];
     qDebug("before read data: dataLen=%d", *dataLen);
+    memset(data, 0, *dataLen);
     ret =
         libusb_interrupt_transfer(m_deviceHandle, m_endPointInAddr, data, *dataLen, &transferedInfo, TIMEOUT_TRANSFER);
 
@@ -310,7 +419,11 @@ int ControlPanelUsbController::cmdReadNoLock(unsigned char *data, int *dataLen) 
     } else {
         qDebug("response parse success: code=%s", m_cpp->errCode2String(rpf.getResponseCode()).c_str());
     }
-    ret = rpf.getResponseData(data, dataLen);
+    ret = rpf.getResponseDataWithoutErrCode(data, dataLen);
+    for (int i = 0; i < *dataLen; i++) {
+        qDebug("response data[%d]=%d C=%c", i, data[i], data[i]);
+    }
+
     return ret;
 }
 

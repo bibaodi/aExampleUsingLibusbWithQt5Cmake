@@ -46,6 +46,15 @@ int ProtocalFormat::getResponseData(unsigned char *data, int *dataLen) {
     return 0;
 }
 
+int ProtocalFormat::getResponseDataWithoutErrCode(unsigned char *data, int *dataLen) {
+    int respLen = getResponseDataFieldLength() - 1; /*first byte is the error code.*/
+    for (int i = 0; i < respLen; i++) {
+        data[i] = m_responseData[i + 1];
+    }
+    *dataLen = respLen;
+    return 0;
+}
+
 void ProtocalFormat::setLength(const unsigned char dataLength) { m_length = dataLength + 2; }
 
 void ProtocalFormat::setCmdCode(const unsigned char _code) { m_cmdCode = _code; }
@@ -297,8 +306,8 @@ int ControlPanelProtocal::generateSliderSetBuffer(unsigned char *cmdData, const 
     return getProtocalFormatBuffer(HidCmdCode::CMD_SLIDER_SET, DECOUPLE_PARAMS4);
 }
 
-int ControlPanelProtocal::generateSooftwareUpgradeBuffer(unsigned char *cmdData, const unsigned int cmdDataLength,
-                                                         unsigned char *outBuffer, int *outLength) {
+int ControlPanelProtocal::generateSoftwareUpgradeBuffer(unsigned char *cmdData, const unsigned int cmdDataLength,
+                                                        unsigned char *outBuffer, int *outLength) {
     return getProtocalFormatBuffer(HidCmdCode::CMD_FW_UPGRADE, DECOUPLE_PARAMS4);
 }
 

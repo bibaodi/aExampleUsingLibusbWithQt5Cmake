@@ -11,56 +11,90 @@ Window {
     Item {
         id: id_rootItem
         objectName: "masterItem"
+        Column {
+            Row {
+                Button {
+                    id: id_button01
+                    objectName: "buttonConnect"
+                    text: "connect"
 
-        Row {
-            Button {
-                id: id_button01
-                objectName: "buttonConnect"
-                text: "connect"
+                    signal sigQmlButtonClick(string msg)
+                    onClicked: {
+                        console.log("connect Button clicked...")
+                        id_button01.sigQmlButtonClick("connect")
+                    }
+                }
 
-                signal sigQmlButtonClick(string msg)
-                onClicked: {
-                    console.log("connect Button clicked...")
-                    id_button01.sigQmlButtonClick("connect")
+                Button {
+                    id: id_buttonClose
+                    objectName: "buttonClose"
+                    text: "Close"
+                    onClicked: {
+                        console.log("close clicked...")
+                        id_button01.sigQmlButtonClick("close")
+                    }
+                }
+
+                Button {
+                    id: id_buttonLight
+                    objectName: "buttonLight"
+                    text: "lightSet"
+                    signal sigQmlButtonClick(string msg)
+                    onClicked: {
+                        console.log("light set clicked...")
+                        id_buttonLight.sigQmlButtonClick("light:12")
+                    }
+                }
+                Button {
+                    id: id_buttonLightOff
+                    objectName: "buttonLightOff"
+                    text: "lightsOff"
+                    onClicked: {
+                        console.log("light off clicked...")
+                        id_buttonLight.sigQmlButtonClick("light:0")
+                    }
+                }
+                Button {
+                    id: id_buttonLightGet
+                    objectName: "buttonLightGet"
+                    text: "lightsGet"
+                    onClicked: {
+                        console.log("light get clicked...")
+                        id_buttonLight.sigQmlButtonClick("light:-1")
+                    }
                 }
             }
-
-            Button {
-                id: id_buttonClose
-                objectName: "buttonClose"
-                text: "Close"
-                onClicked: {
-                    console.log("close clicked...")
-                    id_button01.sigQmlButtonClick("close")
+            Row {
+                Button {
+                    id: id_buttonSliderSet
+                    objectName: "buttonSliderSet" + text
+                    text: "SliderSet"
+                    onClicked: {
+                        console.log(text + "light get clicked...")
+                        id_buttonLight.sigQmlButtonClick("slider:1,1")
+                    }
                 }
             }
-
-            Button {
-                id: id_buttonLight
-                objectName: "buttonLight"
-                text: "lightSet"
-                signal sigQmlButtonClick(string msg)
-                onClicked: {
-                    console.log("light set clicked...")
-                    id_buttonLight.sigQmlButtonClick("12")
+            Row {
+                Button {
+                    id: id_buttongetVersion
+                    objectName: "button" + text
+                    text: "getVersion"
+                    onClicked: {
+                        console.log(text + " clicked...")
+                        id_buttonLight.sigQmlButtonClick("version:1,1")
+                    }
                 }
             }
-            Button {
-                id: id_buttonLightOff
-                objectName: "buttonLightOff"
-                text: "lightsOff"
-                onClicked: {
-                    console.log("light off clicked...")
-                    id_buttonLight.sigQmlButtonClick("0")
-                }
-            }
-            Button {
-                id: id_buttonLightGet
-                objectName: "buttonLightGet"
-                text: "lightsGet"
-                onClicked: {
-                    console.log("light get clicked...")
-                    id_buttonLight.sigQmlButtonClick("-1")
+            Row {
+                Button {
+                    id: id_buttongetUuid
+                    objectName: "button" + text
+                    text: "getUuid"
+                    onClicked: {
+                        console.log(text + " clicked...")
+                        id_buttonLight.sigQmlButtonClick("getuuid:2,1")
+                    }
                 }
             }
         }

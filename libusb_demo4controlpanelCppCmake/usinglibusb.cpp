@@ -12,7 +12,7 @@ UsingLibusb::UsingLibusb(QObject *rootItem, QObject *parent) : QObject{parent} {
     }
     QObject *buttonLight = rootItem->findChild<QObject *>("buttonLight");
     if (buttonLight) {
-        QObject::connect(buttonLight, SIGNAL(sigQmlButtonClick(QString)), this, SLOT(slotLight(QString)));
+        QObject::connect(buttonLight, SIGNAL(sigQmlButtonClick(QString)), this, SLOT(slotCmdDispatch(QString)));
     }
 }
 
@@ -32,10 +32,29 @@ void UsingLibusb::slotFun(const QString &string) {
     }
 }
 
-void UsingLibusb::slotLight(const QString &string) {
-    qDebug() << "debug before run listDevs:" << string;
-    int lightValue = string.toInt();
+void UsingLibusb::slotCmdDispatch(const QString &string) {
+    qDebug() << "debug before run cmd from QML:" << string;
+    QStringList cmdKeyValues = string.split(":");
+    QString cmdKey = cmdKeyValues[0];
+    QString cmdValue = cmdKeyValues[1];
 
+    if (cmdKey.contains("light", Qt::CaseInsensitive)) {
+        controlLights(cmdValue);
+    }
+    if (cmdKey.contains("slider", Qt::CaseInsensitive)) {
+        controlSlider(cmdValue);
+    }
+    if (cmdKey.contains("version", Qt::CaseInsensitive)) {
+        getVersion();
+    }
+    if (cmdKey.contains("getUUid", Qt::CaseInsensitive)) {
+        getUuid();
+    }
+}
+
+void UsingLibusb::controlLights(QString string) {
+    qDebug() << "debug controlLights run cmd from QML:" << string;
+    int lightValue = string.toInt();
     std::vector<unsigned char> lights(29);
     if (lightValue >= 0) {
         for (int i = 0; i < 29; i++) {
@@ -50,7 +69,24 @@ void UsingLibusb::slotLight(const QString &string) {
             qDebug("lights[%d]=%d", i, lights[i]);
         }
     }
-    std::cout << lights.data();
+}
+
+void UsingLibusb::controlSlider(QString string) {
+    qDebug() << "debug controlSlider run cmd from QML:" << string;
+    QStringList cmdKeyValues = string.split(",");
+    int sens = cmdKeyValues[0].toInt();
+    int direct = cmdKeyValues[1].toInt();
+    cpuc.controlSider(sens, direct);
+}
+
+void UsingLibusb::getVersion() {
+    char sVersion[64] = {0};
+    cpuc.getSoftwareVersion(sVersion);
+}
+
+void UsingLibusb::getUuid() {
+    char sUuid[64] = {0};
+    cpuc.getUuid(sUuid);
 }
 
 void UsingLibusb::print_devs(libusb_device **devs) {

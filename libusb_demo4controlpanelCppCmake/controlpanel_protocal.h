@@ -68,6 +68,7 @@ class ProtocalFormat {
     unsigned char getLength();
     int getResponseDataFieldLength();
     int getResponseData(unsigned char *data, int *dataLen);
+    int getResponseDataWithoutErrCode(unsigned char *data, int *dataLen);
     void setCmdCode(const unsigned char _code);
     void setCmdData(unsigned char *ptr, int length);
     int getResponseCode();
@@ -89,7 +90,7 @@ class ControlPanelProtocal {
     int FUN_NAME(unsigned char *cmdData, const unsigned int cmdDataLength, unsigned char *outBuffer, int *outLength)
     FUNCTION_DECLARE(generateLightSetBuffer);
     FUNCTION_DECLARE(generateSliderSetBuffer);
-    FUNCTION_DECLARE(generateSooftwareUpgradeBuffer);
+    FUNCTION_DECLARE(generateSoftwareUpgradeBuffer);
     FUNCTION_DECLARE(generateUuidSetBuffer);
 #undef FUNCTION_DECLARE
 #define FUNCTION_NODATA_DECLARE(FUN_NAME) int FUN_NAME(unsigned char *outBuffer, int *outLength)
