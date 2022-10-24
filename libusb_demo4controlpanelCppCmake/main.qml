@@ -54,6 +54,15 @@ Window {
                     id_buttonLight.sigQmlButtonClick("0")
                 }
             }
+            Button {
+                id: id_buttonLightGet
+                objectName: "buttonLightGet"
+                text: "lightsGet"
+                onClicked: {
+                    console.log("light get clicked...")
+                    id_buttonLight.sigQmlButtonClick("-1")
+                }
+            }
         }
     }
 }

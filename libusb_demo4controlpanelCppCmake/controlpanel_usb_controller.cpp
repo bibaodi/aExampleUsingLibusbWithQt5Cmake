@@ -71,7 +71,11 @@ int ControlPanelUsbController::connectDevice_quickTest() {
 }
 
 int ControlPanelUsbController::connectDevice() {
-    int ret = openDeviceByVenderProductIds(m_vendorId, m_productId);
+    int ret = checkStatusOfConnection();
+    if (LIBUSB_SUCCESS == ret) {
+        return ret;
+    }
+    ret = openDeviceByVenderProductIds(m_vendorId, m_productId);
     if (LIBUSB_SUCCESS != ret) {
         ErrPrint(openDevice, ret);
         return ret;
@@ -96,7 +100,7 @@ int ControlPanelUsbController::connectDevice() {
             qDebug("success claim interface.");
             m_isConnected = true;
             m_deviceHandle = handle;
-            cmdRead(nullptr, nullptr); // start thread
+            // cmdReadThreadStart(nullptr, nullptr); // start thread
             return LIBUSB_SUCCESS;
         }
     }
@@ -108,7 +112,7 @@ int ControlPanelUsbController::disconnectDevice() {
     int ret = 0;
 
     if (nullptr != m_deviceHandle) {
-        smphSignalMainToThread.release(); // make read thread exit ;
+        // smphSignalMainToThread.release(); // make read thread exit ;
         qDebug("release interface");
         ret = libusb_release_interface(m_deviceHandle, INTERFACE_NUMBER);
         if (ret) {
@@ -126,13 +130,13 @@ int ControlPanelUsbController::disconnectDevice() {
 
 int ControlPanelUsbController::checkStatusOfConnection() {
     if (false == m_isConnected || nullptr == m_deviceHandle) {
-        qDebug("cmdWrite: handle not available");
+        qDebug("cmdWriteWithLock: handle not available");
         return LIBUSB_ERROR_NO_DEVICE;
     }
     return LIBUSB_SUCCESS;
 }
 
-int ControlPanelUsbController::controlLedLights(std::vector<unsigned char> arrayOfValues) {
+int ControlPanelUsbController::controlLedLightsOnlySetNoRead(std::vector<unsigned char> arrayOfValues) {
     qDebug("array of values[0]=%d", arrayOfValues[0]);
     int ret = checkStatusOfConnection();
     if (ret) {
@@ -154,112 +158,108 @@ int ControlPanelUsbController::controlLedLights(std::vector<unsigned char> array
         return ret;
     }
     // convert to protocal format.
-    ret = cmdWrite(outBuf, outLength);
+    ret = cmdWriteWithLock(outBuf, outLength);
     if (ret) {
         ErrPrint(controlLedLights_cmdWrite, ret);
     }
     return ret;
 }
 
-#include <signal.h>
-
-static int state = 0;
-static int next_state(void);
-static volatile sig_atomic_t do_exit = 0;
-struct libusb_transfer *irq_transfer = NULL;
-enum {
-    STATE_AWAIT_MODE_CHANGE_AWAIT_FINGER_ON = 1,
-    STATE_AWAIT_IRQ_FINGER_DETECTED,
-    STATE_AWAIT_MODE_CHANGE_CAPTURE,
-    STATE_AWAIT_IMAGE,
-    STATE_AWAIT_MODE_CHANGE_AWAIT_FINGER_OFF,
-    STATE_AWAIT_IRQ_FINGER_REMOVED,
-};
-
-static int next_state(void) {
-    int r = 0;
-
-    printf("old state: %d\n", state);
-    switch (state) {
-    case STATE_AWAIT_IRQ_FINGER_REMOVED:
-        state = STATE_AWAIT_MODE_CHANGE_AWAIT_FINGER_ON;
-        break;
-    default:
-        printf("unrecognised state %d\n", state);
+int ControlPanelUsbController::controlLedLights(std::vector<unsigned char> arrayOfValues) {
+    int ret = checkStatusOfConnection();
+    if (ret) {
+        ErrPrint(controlLedLights_connection, ret);
     }
-    if (r < 0) {
-        fprintf(stderr, "error detected changing state\n");
-        return r;
+    const unsigned int maxLen = static_cast<unsigned int>(PacketDefine::LEN_MAX);
+    unsigned int inLength = arrayOfValues.size();
+    unsigned char inBuf[maxLen] = {0};
+    unsigned char outBuf[maxLen] = {0};
+    int outLength = 0;
+    assert(inLength <= maxLen); // should be 29.
+    for (int i = 0; i < inLength; i++) {
+        inBuf[i] = arrayOfValues[i];
     }
 
-    printf("new state: %d\n", state);
-    return 0;
+    ret = m_cpp->getProtocalFormatBuffer(HidCmdCode::CMD_BLIGHT_SET, inBuf, inLength, outBuf, &outLength);
+    if (ret) {
+        qDebug("get protocal buffer error");
+        return ret;
+    }
+    // convert to protocal format.
+    ret = cmdWriteNoLock(outBuf, outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdWrite, ret);
+    }
+    qDebug("finish cmdWriteNoLock");
+    outLength = maxLen;
+    ret = cmdReadNoLock(outBuf, &outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdRead, ret);
+    }
+    return ret;
 }
 
-static void request_exit(sig_atomic_t code) { do_exit = code; }
+int ControlPanelUsbController::getLedLights(std::vector<unsigned char> &arrayOfValues) {
+    int ret = 0;
+    const unsigned int maxLen = static_cast<unsigned int>(PacketDefine::LEN_MAX);
+    unsigned char outBuf[maxLen] = {0};
+    int outLength = 0;
 
-static void LIBUSB_CALL cb_irq(struct libusb_transfer *transfer) {
-    unsigned char irqtype = transfer->buffer[0];
-
-    if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
-        fprintf(stderr, "irq transfer status %d?\n", transfer->status);
-        goto err_free_transfer;
+    ret = m_cpp->generateLightsGetBuffer(outBuf, &outLength);
+    if (ret) {
+        qDebug("get protocal buffer error");
+        return ret;
+    }
+    // convert to protocal format.
+    ret = cmdWriteNoLock(outBuf, outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdWrite, ret);
+    }
+    outLength = maxLen;
+    ret = cmdReadNoLock(outBuf, &outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdRead, ret);
     }
 
-    printf("IRQ callback %02x\n", irqtype);
-    switch (state) {
-    case STATE_AWAIT_IRQ_FINGER_DETECTED:
-        if (irqtype == 0x01) {
-            if (next_state() < 0)
-                goto err_free_transfer;
-        } else {
-            printf("finger-on-sensor detected in wrong state!\n");
-        }
-        break;
-    case STATE_AWAIT_IRQ_FINGER_REMOVED:
-        if (irqtype == 0x02) {
-            if (next_state() < 0)
-                goto err_free_transfer;
-        } else {
-            printf("finger-on-sensor detected in wrong state!\n");
-        }
-        break;
+    arrayOfValues.clear();
+    for (int i = 0; i < outLength; i++) {
+        arrayOfValues.push_back(outBuf[i]);
     }
-    if (libusb_submit_transfer(irq_transfer) < 0)
-        goto err_free_transfer;
-
-    return;
-
-err_free_transfer:
-    libusb_free_transfer(transfer);
-    irq_transfer = NULL;
-    request_exit(2);
+    return ret;
 }
 
-int ControlPanelUsbController::cmdWriteAsync(unsigned char *irqbuf, unsigned int dataLen) {
-    irq_transfer = libusb_alloc_transfer(0);
-    if (!irq_transfer) {
-        errno = ENOMEM;
+int ControlPanelUsbController::cmdWriteAsync(unsigned char *irqbuf, unsigned int dataLen) { return 0; }
+
+int ControlPanelUsbController::cmdWriteNoLock(unsigned char *irqbuf, unsigned int dataLen) {
+    int ret = 0;
+    int transferedInfo = 0;
+    assert(dataLen <= 64);
+    for (int i = 0; i < dataLen; i++) {
+        qDebug("cmdWriteNoLock cmd [%d]=%d,", i, irqbuf[i]);
+    }
+    if (false == m_isConnected || nullptr == m_deviceHandle) {
+        qDebug("cmdWriteWithLock: handle not available");
         return -1;
     }
-    if (m_isConnected && m_deviceHandle) {
-        libusb_fill_interrupt_transfer(irq_transfer, m_deviceHandle, m_endPointInAddr, irqbuf, sizeof(irqbuf), cb_irq,
-                                       NULL, 0);
-    } else {
-        return -1;
+
+    ret = libusb_interrupt_transfer(m_deviceHandle, m_endPointOutAddr, irqbuf, dataLen, &transferedInfo,
+                                    TIMEOUT_TRANSFER);
+    if (ret) {
+        ErrPrint(cmd - Write, ret);
     }
-    return 0;
+
+    return ret;
 }
 
-int ControlPanelUsbController::cmdWrite(unsigned char *irqbuf, unsigned int dataLen) {
+int ControlPanelUsbController::cmdWriteWithLock(unsigned char *irqbuf, unsigned int dataLen) {
     int ret = 0;
     int transferedInfo = 0;
     assert(dataLen > 5 && dataLen <= 64);
     for (int i = 0; i < dataLen; i++) {
-        qDebug("cmd [%d]=%d,", i, irqbuf[i]);
+        qDebug("cmdWriteWithLock cmd [%d]=%d,", i, irqbuf[i]);
     }
     if (false == m_isConnected || nullptr == m_deviceHandle) {
-        qDebug("cmdWrite: handle not available");
+        qDebug("cmdWriteWithLock: handle not available");
         return -1;
     }
 
@@ -275,7 +275,46 @@ int ControlPanelUsbController::cmdWrite(unsigned char *irqbuf, unsigned int data
     return ret;
 }
 
-int ControlPanelUsbController::doCmdRead() {
+int ControlPanelUsbController::cmdReadNoLock(unsigned char *data, int *dataLen) {
+    int ret = 0;
+
+    int transferedInfo = 0;
+    if (false == m_isConnected || nullptr == m_deviceHandle) {
+        qDebug("doCmdRead: handle not available");
+        return -1; // continue;
+    }
+    // unsigned int dataLen = 64;
+    // unsigned char data[64];
+    qDebug("before read data: dataLen=%d", *dataLen);
+    ret =
+        libusb_interrupt_transfer(m_deviceHandle, m_endPointInAddr, data, *dataLen, &transferedInfo, TIMEOUT_TRANSFER);
+
+    if (ret) {
+        ErrPrint(readThread, ret);
+        if (LIBUSB_ERROR_IO == ret) {
+            qDebug("doCmdRead: IO error Exit.");
+            return LIBUSB_ERROR_IO;
+        }
+    }
+    qDebug("read data: transfered=%d", transferedInfo);
+    for (int i = 0; i < transferedInfo; i++) {
+        qDebug("\treadData:[%d]=%d,", i, data[i]);
+    }
+    if (0 == transferedInfo) {
+        return ret;
+    }
+    ProtocalFormat rpf;
+    ret = rpf.parseResponseFromData(data, transferedInfo);
+    if (ret) {
+        qErrnoWarning("response parsed error%d", ret);
+    } else {
+        qDebug("response parse success: code=%s", m_cpp->errCode2String(rpf.getResponseCode()).c_str());
+    }
+    ret = rpf.getResponseData(data, dataLen);
+    return ret;
+}
+
+int ControlPanelUsbController::doCmdReadInThread() {
     int ret = 0;
     int n = 1000;
     smphSignalThreadToMain.release();
@@ -315,11 +354,12 @@ int ControlPanelUsbController::doCmdRead() {
     return ret;
 }
 
-int ControlPanelUsbController::cmdRead(unsigned char *data, unsigned int *dataLen) {
+int ControlPanelUsbController::cmdReadThreadStart(unsigned char *data, unsigned int *dataLen) {
     unsigned int dataLen1 = 64;
     unsigned char data1[64];
-    // auto mcu_thread = std::async(std::launch::async, &ControlPanelUsbController::doCmdRead, this, data1, &dataLen1);
-    std::thread *r = new std::thread(&ControlPanelUsbController::doCmdRead, this);
+    // auto mcu_thread = std::async(std::launch::async, &ControlPanelUsbController::doCmdReadInThread, this, data1,
+    // &dataLen1);
+    std::thread *r = new std::thread(&ControlPanelUsbController::doCmdReadInThread, this);
     r->detach();
     m_readThread = r;
 

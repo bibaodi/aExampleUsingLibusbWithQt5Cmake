@@ -66,6 +66,8 @@ class ProtocalFormat {
     unsigned int getTotalLength();
     unsigned char calculateXor();
     unsigned char getLength();
+    int getResponseDataFieldLength();
+    int getResponseData(unsigned char *data, int *dataLen);
     void setCmdCode(const unsigned char _code);
     void setCmdData(unsigned char *ptr, int length);
     int getResponseCode();

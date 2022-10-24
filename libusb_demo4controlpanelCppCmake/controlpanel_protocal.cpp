@@ -35,6 +35,17 @@ unsigned char ProtocalFormat::calculateXor() {
 }
 unsigned char ProtocalFormat::getLength() { return m_length; }
 
+int ProtocalFormat::getResponseDataFieldLength() { return getResponseDataFieldLength(m_length); }
+
+int ProtocalFormat::getResponseData(unsigned char *data, int *dataLen) {
+    int respLen = getResponseDataFieldLength();
+    for (int i = 0; i < respLen; i++) {
+        data[i] = m_responseData[i];
+    }
+    *dataLen = respLen;
+    return 0;
+}
+
 void ProtocalFormat::setLength(const unsigned char dataLength) { m_length = dataLength + 2; }
 
 void ProtocalFormat::setCmdCode(const unsigned char _code) { m_cmdCode = _code; }

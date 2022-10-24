@@ -1,6 +1,7 @@
 #include "usinglibusb.h"
 #include "controlpanel_usb_controller.h"
 #include <QDebug>
+#include <iostream>
 #include <libusb.h>
 #include <qimage.h>
 
@@ -36,10 +37,20 @@ void UsingLibusb::slotLight(const QString &string) {
     int lightValue = string.toInt();
 
     std::vector<unsigned char> lights(29);
-    for (int i = 0; i < 29; i++) {
-        lights[i] = lightValue;
+    if (lightValue >= 0) {
+        for (int i = 0; i < 29; i++) {
+            lights[i] = lightValue;
+        }
+        // cpuc.controlLedLights(lights);
+        cpuc.controlLedLights(lights);
+    } else {
+        cpuc.getLedLights(lights);
+        qDebug("get lights=");
+        for (int i = 0; i < 29; i++) {
+            qDebug("lights[%d]=%d", i, lights[i]);
+        }
     }
-    cpuc.controlLedLights(lights);
+    std::cout << lights.data();
 }
 
 void UsingLibusb::print_devs(libusb_device **devs) {

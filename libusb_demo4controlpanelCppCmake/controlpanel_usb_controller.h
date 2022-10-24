@@ -22,7 +22,14 @@ class ControlPanelUsbController : public QObject {
     int connectDevice_quickTest();
     int disconnectDevice();
     int checkStatusOfConnection();
+    int controlLedLightsOnlySetNoRead(std::vector<unsigned char> arrayOfValues);
+    //!
+    //! \brief controlLedLights
+    //! \param arrayOfValues (length ==29; range [0,12])
+    //! \return error-code
+    //!
     int controlLedLights(std::vector<unsigned char> arrayOfValues);
+    int getLedLights(std::vector<unsigned char> &arrayOfValues);
 
   private:
     //!
@@ -41,10 +48,12 @@ class ControlPanelUsbController : public QObject {
     //! \return
     //!
     int openDeviceByVenderProductIds(const unsigned int vid, const unsigned int pid);
-    int cmdWrite(unsigned char *data, unsigned int dataLen);
+    int cmdWriteNoLock(unsigned char *data, unsigned int dataLen);
+    int cmdWriteWithLock(unsigned char *data, unsigned int dataLen);
     int cmdWriteAsync(unsigned char *data, unsigned int dataLen);
-    int doCmdRead();
-    int cmdRead(unsigned char *data, unsigned int *dataLen);
+    int cmdReadNoLock(unsigned char *data, int *dataLen);
+    int doCmdReadInThread();
+    int cmdReadThreadStart(unsigned char *data, unsigned int *dataLen);
 
   private:
     bool m_isConnected;
