@@ -403,15 +403,57 @@ int ControlPanelUsbController::firmwareUpgrade(const char *firmwareData, int dat
 
     ret = cmdWriteNoLock(outBuf, outLength);
     if (ret) {
-        ErrPrint(controlLedLights_cmdWrite, ret);
+        ErrPrint(firmwareUpgrade_cmdWrite, ret);
     }
+
     outLength = maxLen;
     ret = cmdReadNoLock(outBuf, &outLength);
     if (ret) {
-        ErrPrint(controlLedLights_cmdRead, ret);
+        ErrPrint(firmwareUpgrade_cmdRead, ret);
     }
-    // step-02, firmware entity;
+    qDebug("finish firmware upgrade setop 01.");
 
+    // step-02, firmware entity;
+    const int maxSegmentLen = 55;
+    const int offsetLen = 2;
+    unsigned char segfirmwareBuf[maxSegmentLen + offsetLen] = {0};
+
+    int positionCursor = 0;
+    pLen = (unsigned char *)&positionCursor;
+    int needSendLen = dataLen;
+    int segmentLen = 0;
+    while (needSendLen > 0) {
+        qDebug("firmware send position=%d", positionCursor);
+        memset(segfirmwareBuf, 0, (maxSegmentLen + offsetLen));
+        segfirmwareBuf[0] = (unsigned char)*(pLen);
+        segfirmwareBuf[1] = (unsigned char)*(pLen + 1);
+
+        if (needSendLen >= maxSegmentLen) {
+            segmentLen = maxSegmentLen + offsetLen;
+            memcpy(segfirmwareBuf + 2, firmwareData + positionCursor, maxSegmentLen);
+        } else {
+            segmentLen = needSendLen + offsetLen;
+            memcpy(segfirmwareBuf + 2, firmwareData + positionCursor, needSendLen);
+        }
+        positionCursor += maxSegmentLen;
+        needSendLen -= maxSegmentLen;
+        ret = m_cpp->generateSoftwareUpgradeBuffer(segfirmwareBuf, segmentLen, outBuf, &outLength);
+        if (ret) {
+            qDebug("get protocal buffer error");
+            return ret;
+        }
+        ret = cmdWriteNoLock(outBuf, outLength);
+        if (ret) {
+            ErrPrint(firmwareUpgrade_cmdWrite, ret);
+            break;
+        }
+        outLength = maxLen;
+        ret = cmdReadNoLock(outBuf, &outLength);
+        if (ret) {
+            ErrPrint(firmwareUpgrade_cmdRead, ret);
+            break;
+        }
+    }
     return ret;
 }
 
@@ -421,14 +463,16 @@ int ControlPanelUsbController::cmdWriteNoLock(unsigned char *irqbuf, unsigned in
     int ret = 0;
     int transferedInfo = 0;
     assert(dataLen <= 64);
+#if 0
     for (int i = 0; i < dataLen; i++) {
         qDebug("cmdWriteNoLock cmd [%d]=%d,", i, irqbuf[i]);
     }
+#endif
     if (false == m_isConnected || nullptr == m_deviceHandle) {
         qDebug("cmdWriteWithLock: handle not available");
         return -1;
     }
-    return 0;
+
     ret = libusb_interrupt_transfer(m_deviceHandle, m_endPointOutAddr, irqbuf, dataLen, &transferedInfo,
                                     TIMEOUT_TRANSFER);
     if (ret) {
