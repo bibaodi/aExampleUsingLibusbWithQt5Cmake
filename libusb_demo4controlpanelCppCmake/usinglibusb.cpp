@@ -102,11 +102,11 @@ void UsingLibusb::getDiag() {
 
 void UsingLibusb::firmwareUpgrade(QString f) {
 
-    char data[64] = "/tmp/qimage.myfileLines.bin";
+    char data[64] = "/tmp/cp_firmware_V2.21.bin";
     FILE *fp = fopen(data, "rb");
     memset(data, 0, 64);
 
-    int len = 357422;
+    int len = 40196;
     void *buf = calloc(len + 1, sizeof(char));
     fread(buf, len, 1, fp);
     fclose(fp);

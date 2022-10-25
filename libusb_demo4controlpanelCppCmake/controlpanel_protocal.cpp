@@ -268,7 +268,7 @@ int ControlPanelProtocal::getProtocalFormatBuffer(HidCmdCode cmdCode, unsigned c
         break;
     }
     case static_cast<int>(HidCmdCode::CMD_FW_UPGRADE): {
-        assert(1024 < cmdDataLength);
+        assert(1024 < cmdDataLength || 8 == cmdDataLength);
         break;
     }
     case static_cast<int>(HidCmdCode::CMD_SET_UUID): {

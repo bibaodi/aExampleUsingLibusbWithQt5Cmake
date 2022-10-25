@@ -377,10 +377,41 @@ int ControlPanelUsbController::firmwareUpgrade(const char *firmwareData, int dat
         ErrPrint(controlLedLights_connection, ret);
         return ret;
     }
+    const unsigned int maxLen = static_cast<unsigned int>(PacketDefine::LEN_MAX);
+    unsigned char outBuf[maxLen] = {0};
+    int outLength = 0;
+
     qDebug("firm len=%d data=%s, ", dataLen, firmwareData);
     // unsigned int crc32Value = CRC::CalculateBits(firmwareData, dataLen, CRC::CRC_32());
     unsigned int crc32Value = CRC::Calculate(firmwareData, dataLen, CRC::CRC_32());
-    qDebug("crc32=%u", crc32Value);
+    qDebug("crc32=%d,", crc32Value);
+    const int lenCrcAndLen = 8;
+    unsigned char dataCrcAndLen[lenCrcAndLen] = {0};
+    unsigned char *pCrc = (unsigned char *)&crc32Value;
+    unsigned char *pLen = (unsigned char *)&dataLen;
+    for (int i = 0; i < 4; i++) {
+        dataCrcAndLen[i] = (unsigned char)*(pCrc + i);
+        dataCrcAndLen[4 + i] = (unsigned char)*(pLen + i);
+        qDebug("littleEndian=%d, %d", dataCrcAndLen[i], dataCrcAndLen[i + 4]);
+    }
+    // step-01, firmware meta info;
+    ret = m_cpp->generateSoftwareUpgradeBuffer(dataCrcAndLen, lenCrcAndLen, outBuf, &outLength);
+    if (ret) {
+        qDebug("get protocal buffer error");
+        return ret;
+    }
+
+    ret = cmdWriteNoLock(outBuf, outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdWrite, ret);
+    }
+    outLength = maxLen;
+    ret = cmdReadNoLock(outBuf, &outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdRead, ret);
+    }
+    // step-02, firmware entity;
+
     return ret;
 }
 
@@ -397,7 +428,7 @@ int ControlPanelUsbController::cmdWriteNoLock(unsigned char *irqbuf, unsigned in
         qDebug("cmdWriteWithLock: handle not available");
         return -1;
     }
-
+    return 0;
     ret = libusb_interrupt_transfer(m_deviceHandle, m_endPointOutAddr, irqbuf, dataLen, &transferedInfo,
                                     TIMEOUT_TRANSFER);
     if (ret) {
