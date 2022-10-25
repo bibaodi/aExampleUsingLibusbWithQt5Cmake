@@ -1,5 +1,6 @@
 #include "controlpanel_usb_controller.h"
 #include "controlpanel_protocal.h"
+#include "libcrc_cpp.h"
 #include "semaphore_cpp17.h"
 #include <QDebug>
 #include <future>
@@ -333,6 +334,53 @@ int ControlPanelUsbController::getUuid(char *outString) {
     }
     outString[i] = 0;
     qDebug("UUID=%s", outString);
+    return ret;
+}
+
+int ControlPanelUsbController::getDiagonosticInfo(char *outString) {
+    int ret = checkStatusOfConnection();
+    if (ret) {
+        ErrPrint(controlLedLights_connection, ret);
+        return ret;
+    }
+    const unsigned int maxLen = static_cast<unsigned int>(PacketDefine::LEN_MAX);
+    unsigned char outBuf[maxLen] = {0};
+    int outLength = 0;
+
+    ret = m_cpp->generateStatusGetBuffer(outBuf, &outLength);
+    if (ret) {
+        qDebug("get protocal buffer error");
+        return ret;
+    }
+    // convert to protocal format.
+    ret = cmdWriteNoLock(outBuf, outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdWrite, ret);
+    }
+    outLength = maxLen;
+    ret = cmdReadNoLock(outBuf, &outLength);
+    if (ret) {
+        ErrPrint(controlLedLights_cmdRead, ret);
+    }
+    int i = 0;
+    for (i = 0; i < outLength; i++) {
+        outString[i] = outBuf[i];
+    }
+    outString[i] = 0;
+    qDebug("disgnostic=%s", outString);
+    return ret;
+}
+
+int ControlPanelUsbController::firmwareUpgrade(const char *firmwareData, int dataLen) {
+    int ret = checkStatusOfConnection();
+    if (ret) {
+        ErrPrint(controlLedLights_connection, ret);
+        return ret;
+    }
+    qDebug("firm len=%d data=%s, ", dataLen, firmwareData);
+    // unsigned int crc32Value = CRC::CalculateBits(firmwareData, dataLen, CRC::CRC_32());
+    unsigned int crc32Value = CRC::Calculate(firmwareData, dataLen, CRC::CRC_32());
+    qDebug("crc32=%u", crc32Value);
     return ret;
 }
 

@@ -50,6 +50,12 @@ void UsingLibusb::slotCmdDispatch(const QString &string) {
     if (cmdKey.contains("getUUid", Qt::CaseInsensitive)) {
         getUuid();
     }
+    if (cmdKey.contains("diag", Qt::CaseInsensitive)) {
+        getDiag();
+    }
+    if (cmdKey.contains("firmware", Qt::CaseInsensitive)) {
+        firmwareUpgrade(cmdKeyValues[0]);
+    }
 }
 
 void UsingLibusb::controlLights(QString string) {
@@ -87,6 +93,27 @@ void UsingLibusb::getVersion() {
 void UsingLibusb::getUuid() {
     char sUuid[64] = {0};
     cpuc.getUuid(sUuid);
+}
+
+void UsingLibusb::getDiag() {
+    char sUuid[64] = {0};
+    cpuc.getDiagonosticInfo(sUuid);
+}
+
+void UsingLibusb::firmwareUpgrade(QString f) {
+
+    char data[64] = "/tmp/qimage.myfileLines.bin";
+    FILE *fp = fopen(data, "rb");
+    memset(data, 0, 64);
+
+    int len = 357422;
+    void *buf = calloc(len + 1, sizeof(char));
+    fread(buf, len, 1, fp);
+    fclose(fp);
+
+    cpuc.firmwareUpgrade((char *)buf, len);
+    free(buf);
+    return;
 }
 
 void UsingLibusb::print_devs(libusb_device **devs) {

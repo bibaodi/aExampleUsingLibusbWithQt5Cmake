@@ -97,6 +97,28 @@ Window {
                     }
                 }
             }
+            Row {
+                Button {
+                    id: id_buttongetDiag
+                    objectName: "button" + text
+                    text: "getDiag"
+                    onClicked: {
+                        console.log(text + " clicked...")
+                        id_buttonLight.sigQmlButtonClick("getdiag:2,1")
+                    }
+                }
+            }
+            Row {
+                Button {
+                    id: id_buttonUpgrade
+                    objectName: "button" + text
+                    text: "firmwareUpgrade"
+                    onClicked: {
+                        console.log(text + " clicked...")
+                        id_buttonLight.sigQmlButtonClick("firmwareUpgrade:2,1")
+                    }
+                }
+            }
         }
     }
 }

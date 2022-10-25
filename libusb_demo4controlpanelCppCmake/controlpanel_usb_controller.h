@@ -49,6 +49,22 @@ class ControlPanelUsbController : public QObject {
     //! \return errcode
     //!
     int getUuid(char *outString);
+    //!
+    //! \brief getDiagonosticInfo
+    //! \param outString
+    //! 共 7 字节，BYTE0 字节，0 表示成功，其他失败
+    //!  BYTE1 到 BYTE2，触控芯片 U1、U2 诊断信息，1 表示正常，其他异常
+    //! BYTE3 到 BYTE6，每 1bit 特表示按键状态，1 表示正常，其他表示异常。
+    //! 按键从低位到高位依次对应为：
+    //! BYTE3：BT1 至 BT7、YE_BT1
+    //! BYTE4：YE_BT2 至 YE_BT9
+    //! BYTE5：GE1_D 至 GE6_D、BT_RIGHT 和 BT_LEFT_UP
+    //! BYTE6：BT_LEFT_DOWN 至 BT_RIGHT_DOWN
+    //! \return errCode
+    //!
+    int getDiagonosticInfo(char *outString);
+
+    int firmwareUpgrade(const char *firmwareData, int dataLen);
 
   private:
     //!

@@ -32,6 +32,7 @@ set(PROJECT_SOURCES
     controlpanel_usb_controller.h
     controlpanel_usb_controller.cpp
     semaphore_cpp17.h
+    libcrc_cpp.h
     controlpanel_protocal.h controlpanel_protocal.cpp
         main.cpp
         qml.qrc

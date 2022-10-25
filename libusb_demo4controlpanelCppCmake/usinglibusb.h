@@ -18,6 +18,8 @@ class UsingLibusb : public QObject {
     void controlSlider(QString);
     void getVersion();
     void getUuid();
+    void getDiag();
+    void firmwareUpgrade(QString);
   signals:
   public slots:
     void slotFun(const QString &);
