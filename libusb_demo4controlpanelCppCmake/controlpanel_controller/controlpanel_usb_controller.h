@@ -59,7 +59,7 @@ class ControlPanelUsbController : public QObject {
     //! BYTE3：BT1 至 BT7、YE_BT1
     //! BYTE4：YE_BT2 至 YE_BT9
     //! BYTE5：GE1_D 至 GE6_D、BT_RIGHT 和 BT_LEFT_UP
-    //! BYTE6：BT_LEFT_DOWN 至 BT_RIGHT_DOWN
+    //! BYTE6：BT_LEFT_DOWN,BT_MID=127,BT_LEFT=128,BT_RIGHT_UP=129,BT_RIGHT_DOWN=132
     //! \return errCode
     //!
     int getDiagonosticInfo(char *outString);

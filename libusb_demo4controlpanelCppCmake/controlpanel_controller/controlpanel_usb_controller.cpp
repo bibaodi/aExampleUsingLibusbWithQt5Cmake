@@ -643,6 +643,7 @@ inline int ControlPanelUsbController::openDeviceByVenderProductIds(const unsigne
             qDebug() << "Error occor!";
             break;
         } else if (0 == ret) {
+            ret = LIBUSB_ERROR_NO_DEVICE;
             qDebug("not matched, continue");
             continue;
         }
